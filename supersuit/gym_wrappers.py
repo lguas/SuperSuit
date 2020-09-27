@@ -132,14 +132,22 @@ class delay_observations(ObservationWrapper):
         return super().reset()
 
 class frame_skip(gym.Wrapper):
-    def __init__(self, env, frame_skip):
+    def __init__(self, env, frame_skip, frame_stack=1):
         super().__init__(env)
         self.frame_skip = check_transform_frameskip(frame_skip)
         self.np_random, seed = gym.utils.seeding.np_random(None)
+        self.stack_frames = frame_stack
 
     def seed(self, seed=None):
         self.np_random, seed = gym.utils.seeding.np_random(seed)
         super().seed(seed)
+
+    def reset(self):
+        obs = super().reset()
+        self.stack = [obs]+[self.stack_frames]
+
+    def get_stack_out(self):
+        return []
 
     def step(self, action):
         low, high = self.frame_skip

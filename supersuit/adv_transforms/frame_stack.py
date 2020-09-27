@@ -46,8 +46,34 @@ def stack_init(obs_space, stack_size):
     if isinstance(obs_space, Box):
         tile_shape, new_shape = get_tile_shape(obs_space.low.shape, stack_size)
         return np.tile(np.zeros(new_shape,dtype=obs_space.dtype),tile_shape)
-    else:
+    elif isinstance(obs_space, Discrete):
         return 0
+
+def concat_stack(obs_list, obs_space, stack_frames):
+    if stack_frames == 1:
+        return obs_list[0]
+
+    if isinstance(obs_space, Box):
+        assert len(obs_list) > 0
+        obs_shape = obs_list[0].shape
+        obs_dtype = obs_list[0].dtype
+        zeros = [np.zeros(obs_shape, dtype=obs_dtype) for i in range(stack_frames - len(obs_list))]
+        if len(obs_shape) == 1:
+            return np.concatenate(zeros + obs_list)
+        elif len(obs_shape) == 2:
+            return np.stack(zeros + obs_list,axis=2)
+        elif len(obs_shape) == 3:
+            return np.concatenate(zeros + obs_list,axis=2)
+        else:
+            assert False, "Stacking only supports 1,2,3 dimentional box spaces"
+    elif isinstance(obs_space, Discrete):
+        val = 0
+        for obs in obs_list:
+            val *= obs_space.n
+            val += obs
+        return val
+    else:
+        assert False, "Stacking only support box and discrete spaces"
 
 def stack_obs(frame_stack, obs, obs_space, stack_size):
     '''

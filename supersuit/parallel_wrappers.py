@@ -1,7 +1,7 @@
 from pettingzoo.utils.to_parallel import ParallelEnv
 import gym
 from gym.spaces import Box,Space,Discrete
-from .adv_transforms.frame_stack import stack_obs_space,stack_init,stack_obs
+from .adv_transforms.frame_stack import stack_obs_space,stack_init,stack_obs,concat_stack
 from .adv_transforms.frame_skip import check_transform_frameskip
 from .adv_transforms.obs_delay import Delayer
 import numpy as np
@@ -75,14 +75,26 @@ class delay_observations(ObservationWrapper):
         return super().reset()
 
 class frame_skip(ParallelWraper):
-    def __init__(self, env, frame_skip):
+    def __init__(self, env, frame_skip, frame_stack=1):
         super().__init__(env)
         self.frame_skip = check_transform_frameskip(frame_skip)
         self.np_random, seed = gym.utils.seeding.np_random(None)
+        self.stack_frames = frame_stack
+        assert frame_stack >= 1, "must stack at least one frame"
+        if frame_stack > 1:
+            self.observation_spaces = {agent: stack_obs_space(space, self.stack_frames) for agent, space in self.observation_spaces.items()}
+
 
     def seed(self, seed=None):
         self.np_random, seed = gym.utils.seeding.np_random(seed)
         super().seed(seed)
+
+    def reset(self):
+        self.stacks = {agent:[] for agent in self.agents}
+        obs = super().reset()
+        for agent in self.agents:
+            self.stacks[agent].append(obs[agent])
+        return {agent: concat_stack(self.stacks[agent], self.observation_spaces[agent], self.stack_frames) for agent in self.agents}
 
     def step(self, action):
         low, high = self.frame_skip
@@ -91,9 +103,16 @@ class frame_skip(ParallelWraper):
 
         for x in range(num_skips):
             obs, rews, done, info = super().step(action)
+            for agent in self.agents:
+                stack = self.stacks[agent]
+                stack.append(obs[agent])
+                if len(stack) > self.stack_frames:
+                    stack.pop(0)
+
             for agent, rew in rews.items():
                 total_reward[agent] += rew
             if all(done.values()):
                 break
 
+        obs = {agent: concat_stack(self.stacks[agent], self.observation_spaces[agent], self.stack_frames) for agent in self.agents}
         return obs, total_reward, done, info

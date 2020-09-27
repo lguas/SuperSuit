@@ -205,7 +205,7 @@ class StepAltWrapper(BaseWrapper):
         return observation
 
 class frame_skip_help(StepAltWrapper):
-    def __init__(self, env, frame_skip):
+    def __init__(self, env, frame_skip, frame_stack=1):
         super().__init__(env)
         assert isinstance(frame_skip, int), "multi-agent frame skip only takes in an integer"
         assert frame_skip > 0
