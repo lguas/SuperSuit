@@ -230,26 +230,3 @@ def test_dehomogenize():
     env.reset()
     assert all([s.n == 6 for s in env.action_spaces.values()])
     env.step(5)
-
-
-def test_cyclically_expansive_learning():
-    def new_dummy():
-        base_obs = {"a_{}".format(idx): (np.zeros([8, 8, 3], dtype=np.float32) + np.arange(3) + idx).astype(np.float32) for idx in range(5)}
-        base_obs_space = {"a_{}".format(idx): Box(low=np.float32(0.0), high=np.float32(10.0), shape=[8, 8, 3]) for idx in range(5)}
-        base_act_spaces = {"a_{}".format(idx): Discrete(5) for idx in range(5)}
-
-        return PettingzooWrap(DummyEnv(base_obs, base_obs_space, base_act_spaces, duration=10))
-
-    curriculum = [(0, 1), (2, 2), (6, 3)]
-    curriculum_step = 0
-    env = supersuit.cyclically_expansive_learning_v1(new_dummy(), curriculum=curriculum)
-    env.reset()
-    populate_step = 0
-    for i in range(40):
-        env.step(1)
-        _, rew, _, _ = env.last()
-        if curriculum_step < len(curriculum) - 1 and i >= curriculum[curriculum_step + 1][0]:
-            curriculum_step += 1
-            populate_step = 0
-        assert populate_step < 5 or rew == curriculum[curriculum_step][1]
-        populate_step += 1
