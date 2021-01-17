@@ -1,1 +1,2 @@
-pettingzoo>=0.1.4
+pettingzoo[butterfly]>=1.4.0
+opencv-python
