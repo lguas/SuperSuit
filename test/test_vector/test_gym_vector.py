@@ -18,7 +18,7 @@ def recursive_equal(info1, info2):
     return False
 
 
-def check_vec_env_equivalency(venv1, venv2, check_info=True):
+def check_vec_env_equivalency(venv1, venv2, check_info=False):
     # assert venv1.observation_space == venv2.observation_space
     # assert venv1.action_space == venv2.action_space
 

@@ -32,6 +32,7 @@ class SingleVecEnv:
     def step(self, actions):
         observations, reward, done, info = self.gym_env.step(actions[0])
         if done:
+            info['terminal_observation'] = observations
             observations = self.gym_env.reset()
         observations = np.expand_dims(observations, 0)
         rewards = np.array([reward], dtype=np.float32)
