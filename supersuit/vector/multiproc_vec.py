@@ -159,8 +159,12 @@ class ProcConcatVec(gym.vector.VectorEnv):
             idx_starts.append(cur_env_idx)
         idx_starts.append(num_envs)
 
-        assert num_envs == tot_num_envs
         self.idx_starts = idx_starts
+        assert num_envs == tot_num_envs, \
+            "tot_num_envs passed to ProcConcatVec does not equal the actual number " \
+            "of sub-envs in the construtcted environments. You may need to calculate that " \
+            "number yourself and call ProcConcatVec directly."
+
 
     def reset(self, seed=None):
         for i, pipe in enumerate(self.pipes):
