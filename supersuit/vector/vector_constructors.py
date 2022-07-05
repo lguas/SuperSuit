@@ -6,9 +6,14 @@ import warnings
 
 
 def vec_env_args(env, num_envs):
-    def env_fn():
-        env_copy = cloudpickle.loads(cloudpickle.dumps(env))
-        return env_copy
+    if num_envs == 1:
+        def env_fn():
+            env_copy = env
+            return env_copy
+    else:    
+        def env_fn():
+            env_copy = cloudpickle.loads(cloudpickle.dumps(env))
+            return env_copy
 
     return [env_fn] * num_envs, env.observation_space, env.action_space
 
