@@ -7,16 +7,14 @@
 name: build-publish
 
 on:
-  push:
-    branches: [master]
-  pull_request:
-    branches: [master]
   release:
     types: [published]
 
 jobs:
   build-wheels:
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
     strategy:
       matrix:
         include:

@@ -1,13 +1,13 @@
 import numpy as np
-import gym.vector
-from gym.vector.utils import concatenate, iterate, create_empty_array
+import gymnasium.vector
+from gymnasium.vector.utils import concatenate, iterate, create_empty_array
 
 
-class MarkovVectorEnv(gym.vector.VectorEnv):
+class MarkovVectorEnv(gymnasium.vector.VectorEnv):
     def __init__(self, par_env, black_death=False):
         """
         parameters:
-            - par_env: the pettingzoo Parallel environment that will be converted to a gym vector environment
+            - par_env: the pettingzoo Parallel environment that will be converted to a gymnasium vector environment
             - black_death: whether to give zero valued observations and 0 rewards when an agent is done, allowing for environments with multiple numbers of agents.
                             Is equivalent to adding the black death wrapper, but somewhat more efficient.
 
@@ -22,11 +22,11 @@ class MarkovVectorEnv(gym.vector.VectorEnv):
         assert all(
             self.observation_space == par_env.observation_space(agent)
             for agent in par_env.possible_agents
-        ), "observation spaces not consistent. Perhaps you should wrap with `supersuit.aec_wrappers.pad_observations`?"
+        ), "observation spaces not consistent. Perhaps you should wrap with `supersuit.multiagent_wrappers.pad_observations_v0`?"
         assert all(
             self.action_space == par_env.action_space(agent)
             for agent in par_env.possible_agents
-        ), "action spaces not consistent. Perhaps you should wrap with `supersuit.aec_wrappers.pad_actions`?"
+        ), "action spaces not consistent. Perhaps you should wrap with `supersuit.multiagent_wrappers.pad_action_space_v0`?"
         self.num_envs = len(par_env.possible_agents)
         self.black_death = black_death
 
@@ -72,10 +72,13 @@ class MarkovVectorEnv(gym.vector.VectorEnv):
             for i, agent in enumerate(self.par_env.possible_agents)
             if agent in agent_set
         }
-        observations, rewards, dones, infos = self.par_env.step(act_dict)
+        observations, rewards, terms, truncs, infos = self.par_env.step(act_dict)
 
         # adds last observation to info where user can get it
-        if all(dones.values()):
+        terminations = np.fromiter(terms.values(), dtype=bool)
+        truncations = np.fromiter(truncs.values(), dtype=bool)
+        env_done = (terminations | truncations).all()
+        if env_done:
             for agent, obs in observations.items():
                 infos[agent]["terminal_observation"] = obs
 
@@ -83,30 +86,34 @@ class MarkovVectorEnv(gym.vector.VectorEnv):
             [rewards.get(agent, 0) for agent in self.par_env.possible_agents],
             dtype=np.float32,
         )
-        dns = np.array(
-            [dones.get(agent, False) for agent in self.par_env.possible_agents],
+        tms = np.array(
+            [terms.get(agent, False) for agent in self.par_env.possible_agents],
+            dtype=np.uint8,
+        )
+        tcs = np.array(
+            [truncs.get(agent, False) for agent in self.par_env.possible_agents],
             dtype=np.uint8,
         )
         infs = [infos.get(agent, {}) for agent in self.par_env.possible_agents]
 
-        if all(dones.values()):
+        if env_done:
             observations = self.reset()
         else:
             observations = self.concat_obs(observations)
         assert (
             self.black_death or self.par_env.agents == self.par_env.possible_agents
         ), "MarkovVectorEnv does not support environments with varying numbers of active agents unless black_death is set to True"
-        return observations, rews, dns, infs
+        return observations, rews, tms, tcs, infs
 
-    def render(self, mode="human"):
-        return self.par_env.render(mode)
+    def render(self):
+        return self.par_env.render()
 
     def close(self):
         return self.par_env.close()
 
     def env_is_wrapped(self, wrapper_class):
         """
-        env_is_wrapped only suppors vector and gym environments
+        env_is_wrapped only suppors vector and gymnasium environments
         currently, not pettingzoo environments
         """
         return [False] * self.num_envs

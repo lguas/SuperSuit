@@ -1,6 +1,6 @@
 from supersuit.utils.base_aec_wrapper import PettingzooWrap
 from supersuit.utils.wrapper_chooser import WrapperChooser
-import gym
+import gymnasium
 from supersuit.utils.make_defaultdict import make_defaultdict
 
 
@@ -40,7 +40,7 @@ class aec_reward_lambda(PettingzooWrap):
         self._accumulate_rewards()
 
 
-class gym_reward_lambda(gym.Wrapper):
+class gym_reward_lambda(gymnasium.Wrapper):
     def __init__(self, env, change_reward_fn):
         assert callable(
             change_reward_fn
@@ -50,8 +50,8 @@ class gym_reward_lambda(gym.Wrapper):
         super().__init__(env)
 
     def step(self, action):
-        obs, rew, done, info = super().step(action)
-        return obs, self._change_reward_fn(rew), done, info
+        obs, rew, termination, truncation, info = super().step(action)
+        return obs, self._change_reward_fn(rew), termination, truncation, info
 
 
 reward_lambda_v0 = WrapperChooser(

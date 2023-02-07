@@ -1,6 +1,6 @@
 from pettingzoo.utils.wrappers import BaseParallelWraper
 import numpy as np
-import gym
+import gymnasium
 from supersuit.utils.wrapper_chooser import WrapperChooser
 
 
@@ -12,7 +12,7 @@ class black_death_par(BaseParallelWraper):
         for agent in self.agents:
             space = self.observation_space(agent)
             assert isinstance(
-                space, gym.spaces.Box
+                space, gymnasium.spaces.Box
             ), f"observation sapces for black death must be Box spaces, is {space}"
 
     def reset(self, seed=None, return_info=False, options=None):
@@ -39,7 +39,7 @@ class black_death_par(BaseParallelWraper):
 
     def step(self, actions):
         active_actions = {agent: actions[agent] for agent in self.env.agents}
-        obss, rews, dones, infos = self.env.step(active_actions)
+        obss, rews, terms, truncs, infos = self.env.step(active_actions)
         black_obs = {
             agent: np.zeros_like(self.observation_space(agent).low)
             for agent in self.agents
@@ -47,14 +47,16 @@ class black_death_par(BaseParallelWraper):
         }
         black_rews = {agent: 0.0 for agent in self.agents if agent not in obss}
         black_infos = {agent: {} for agent in self.agents if agent not in obss}
-        env_is_done = all(dones.values())
+        terminations = np.fromiter(terms.values(), dtype=bool)
+        truncations = np.fromiter(truncs.values(), dtype=bool)
+        env_is_done = (terminations & truncations).all()
         total_obs = {**black_obs, **obss}
         total_rews = {**black_rews, **rews}
         total_infos = {**black_infos, **infos}
         total_dones = {agent: env_is_done for agent in self.agents}
         if env_is_done:
             self.agents.clear()
-        return total_obs, total_rews, total_dones, total_infos
+        return total_obs, total_rews, total_dones, total_dones, total_infos
 
 
 black_death_v3 = WrapperChooser(parallel_wrapper=black_death_par)

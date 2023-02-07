@@ -1,6 +1,6 @@
 import numpy as np
-from gym.spaces import Box, Discrete
-from gym import spaces
+from gymnasium.spaces import Box, Discrete
+from gymnasium import spaces
 
 
 def check_homogenize_spaces(all_spaces):
@@ -85,6 +85,8 @@ def dehomogenize_actions(orig_action_space, action):
     elif isinstance(orig_action_space, spaces.Discrete):
         # extra action values refer to action value 0
         n = orig_action_space.n
+        if action is None:
+            return None
         if action > n - 1:
             action = 0
         return action

@@ -1,5 +1,5 @@
 import functools
-import gym
+import gymnasium
 from pettingzoo.utils.wrappers import OrderEnforcingWrapper as PettingzooWrap
 from supersuit.utils.wrapper_chooser import WrapperChooser
 from pettingzoo.utils import BaseParallelWraper
@@ -56,7 +56,7 @@ class shared_wrapper_aec(PettingzooWrap):
     def step(self, action):
         mod = self.modifiers[self.agent_selection]
         action = mod.modify_action(action)
-        if self.dones[self.agent_selection]:
+        if self.terminations[self.agent_selection] or self.truncations[self.agent_selection]:
             action = None
         super().step(action)
         self.add_modifiers(self.agents)
@@ -122,16 +122,16 @@ class shared_wrapper_parr(BaseParallelWraper):
             agent: self.modifiers[agent].modify_action(action)
             for agent, action in actions.items()
         }
-        observations, rewards, dones, infos = super().step(actions)
+        observations, rewards, terminations, truncations, infos = super().step(actions)
         self.add_modifiers(self.agents)
         observations = {
             agent: self.modifiers[agent].modify_obs(obs)
             for agent, obs in observations.items()
         }
-        return observations, rewards, dones, infos
+        return observations, rewards, terminations, truncations, infos
 
 
-class shared_wrapper_gym(gym.Wrapper):
+class shared_wrapper_gym(gymnasium.Wrapper):
     def __init__(self, env, modifier_class):
         super().__init__(env)
         self.modifier = modifier_class()
@@ -145,9 +145,9 @@ class shared_wrapper_gym(gym.Wrapper):
         return obs
 
     def step(self, action):
-        obs, rew, done, info = super().step(self.modifier.modify_action(action))
+        obs, rew, term, trunc, info = super().step(self.modifier.modify_action(action))
         obs = self.modifier.modify_obs(obs)
-        return obs, rew, done, info
+        return obs, rew, term, trunc, info
 
 
 shared_wrapper = WrapperChooser(
